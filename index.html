@@ -191,6 +191,26 @@
             const [saldo, setSaldo] = useState(52500);
             const [notification, setNotification] = useState(null);
 
+            // State untuk Login Form (Ubah jadi kosong agar user mengisi sendiri)
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+
+            // LOGIKA BARU: Ambil nama dari email
+            // Contoh: susi@gmail.com -> Susi
+            // Contoh: budi.santoso@yahoo.com -> Budi Santoso
+            const getUserName = () => {
+                if (!email) return "Warga Semarang";
+                const namePart = email.split('@')[0]; // Ambil teks sebelum @
+                // Hapus angka, ganti titik/underscore jadi spasi, dan kapitalisasi huruf awal
+                return namePart
+                    .replace(/[0-9]/g, '')
+                    .split(/[._]/)
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+            };
+
+            const userName = getUserName();
+
             useEffect(() => {
                 if (screen === 'splash') {
                     const timer = setTimeout(() => setScreen('login'), 2500);
@@ -224,6 +244,9 @@
 
             // --- 2. LOGIN SCREEN ---
             if (screen === 'login') {
+                // Validasi sederhana: Cek apakah email dan password tidak kosong
+                const isFormValid = email.trim() !== '' && password.trim() !== '';
+
                 return (
                     <div className="iphone-frame bg-white flex flex-col px-8 relative font-sans">
                         <div className="notch"></div>
@@ -240,20 +263,40 @@
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider">Email Terdaftar</label>
-                                <input type="email" value="budi@semarangkota.go.id" readOnly className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-gray-700 font-semibold focus:outline-none cursor-not-allowed opacity-70 text-sm" />
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="nama.anda@gmail.com"
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-gray-700 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition text-sm placeholder-gray-400"
+                                />
                             </div>
                             <div>
                                 <label className="block text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider">Kata Sandi</label>
-                                <input type="password" value="********" readOnly className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-gray-700 font-semibold focus:outline-none cursor-not-allowed opacity-70 text-sm" />
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="••••••••"
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-gray-700 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition text-sm placeholder-gray-400"
+                                />
                             </div>
                         </div>
 
                         <div className="flex-1"></div>
 
-                        <button onClick={handleLogin} className="mb-12 w-full bg-gradient-to-r from-teal-600 to-teal-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-teal-600/30 active:scale-95 transition transform hover:brightness-110 flex justify-center items-center group">
+                        <button
+                            onClick={handleLogin}
+                            disabled={!isFormValid}
+                            className={`mb-12 w-full font-bold py-4 rounded-xl shadow-lg transition flex justify-center items-center group
+                                ${isFormValid
+                                    ? 'bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-teal-600/30 active:scale-95 hover:brightness-110 cursor-pointer transform'
+                                    : 'bg-gray-200 text-gray-400 shadow-none cursor-not-allowed'
+                                }`}
+                        >
                             Masuk Aplikasi
-                            <div className="bg-white/20 rounded-full p-1 ml-3 group-hover:translate-x-1 transition">
-                                <Icon name="chevronRight" size={16} color="white" />
+                            <div className={`rounded-full p-1 ml-3 transition ${isFormValid ? 'bg-white/20 group-hover:translate-x-1' : 'bg-transparent'}`}>
+                                <Icon name="chevronRight" size={16} color={isFormValid ? "white" : "#9CA3AF"} />
                             </div>
                         </button>
                     </div>
@@ -275,11 +318,11 @@
                     )}
 
                     <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
-                        {activeTab === 'home' && <HomeScreen saldo={saldo} showNotif={showNotif} setActiveTab={setActiveTab} />}
+                        {activeTab === 'home' && <HomeScreen saldo={saldo} showNotif={showNotif} setActiveTab={setActiveTab} userName={userName} />}
                         {activeTab === 'scan' && <ScanScreen setSaldo={setSaldo} setActiveTab={setActiveTab} showNotif={showNotif} />}
                         {activeTab === 'map' && <MapScreen showNotif={showNotif} />}
                         {activeTab === 'wallet' && <WalletScreen saldo={saldo} showNotif={showNotif} />}
-                        {activeTab === 'profile' && <ProfileScreen setScreen={setScreen} />}
+                        {activeTab === 'profile' && <ProfileScreen setScreen={setScreen} userName={userName} />}
                     </div>
 
                     {activeTab !== 'scan' && (
@@ -312,7 +355,7 @@
         );
 
         // --- HOME SCREEN ---
-        const HomeScreen = ({ saldo, showNotif, setActiveTab }) => (
+        const HomeScreen = ({ saldo, showNotif, setActiveTab, userName }) => (
             <div className="animate__animated animate__fadeIn bg-gray-50">
 
                 <div className="bg-teal-700 pt-12 pb-24 px-6 rounded-b-[40px] shadow-lg relative overflow-hidden z-10">
@@ -332,7 +375,7 @@
 
                     <div className="mb-6 relative z-20">
                         <h2 className="text-teal-200 text-sm font-bold mb-1">Sugeng Rawuh,</h2>
-                        <h1 className="text-white text-2xl font-extrabold tracking-tight leading-tight">Mas Budi Santoso 👋</h1>
+                        <h1 className="text-white text-2xl font-extrabold tracking-tight leading-tight">Kak {userName} 👋</h1>
                         <p className="text-teal-50 text-[10px] mt-1 opacity-90 font-medium">"Bergerak Bersama, Semarang Semakin Hebat!"</p>
                     </div>
 
@@ -353,7 +396,7 @@
                                 <h1 className="text-4xl font-extrabold text-white tracking-tight">{saldo.toLocaleString('id-ID')}</h1>
                             </div>
                         </div>
-                        <div className="bg-white/20 p-2.5 rounded-2xl backdrop-blur-md shadow-lg border border-white/10">
+                        <div onClick={() => setActiveTab('wallet')} className="bg-white/20 p-2.5 rounded-2xl backdrop-blur-md shadow-lg border border-white/10 cursor-pointer active:scale-95 transition hover:bg-white/30">
                             <Icon name="wallet" color="white" size={24} />
                         </div>
                     </div>
@@ -379,7 +422,7 @@
 
                 <div className="mt-6 px-6 grid grid-cols-2 gap-3">
                     <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center">
-                        <p className="text-[9px] font-bold text-gray-400 uppercase mb-1">Reduksi CO₂</p>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase mb-1">Reduksi Emisi CO₂</p>
                         <h4 className="text-lg font-extrabold text-teal-600">24.5 <span className="text-xs font-normal text-gray-500">kg</span></h4>
                     </div>
                     <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center">
@@ -421,15 +464,67 @@
 
         // --- SCAN SCREEN ---
         const ScanScreen = ({ setSaldo, setActiveTab, showNotif }) => {
-            const [step, setStep] = useState('camera');
+            const [step, setStep] = useState('camera'); // camera, analyzing, result, manual
+
+            // State untuk data hasil scan/manual
+            const [scanResult, setScanResult] = useState({
+                type: 'Plastik PET & Kardus',
+                weight: 0.8,
+                price: 1750,
+                confidence: 87,
+                isManual: false
+            });
+
+            // State untuk input form manual
+            const [manualType, setManualType] = useState('Plastik PET');
+            const [manualWeight, setManualWeight] = useState(0.8);
+
+            // Daftar harga sederhana untuk simulasi perhitungan
+            const prices = {
+                'Plastik PET': 3500,
+                'Kardus': 2000,
+                'Kaleng Logam': 3000,
+                'Kertas/Buku': 1500,
+                'Botol Kaca': 500,
+                'Minyak Jelantah': 5000
+            };
 
             const handleCapture = () => {
                 setStep('analyzing');
-                setTimeout(() => setStep('result'), 2200);
+                // Reset form manual ke default saat scan baru
+                setManualType('Plastik PET');
+                setManualWeight(0.8);
+
+                setTimeout(() => {
+                    // Simulasi hasil AI default
+                    setScanResult({
+                        type: 'Plastik PET & Kardus',
+                        weight: 0.8,
+                        price: 1750,
+                        confidence: 87,
+                        isManual: false
+                    });
+                    setStep('result');
+                }, 2200);
+            };
+
+            const handleSaveManual = () => {
+                const pricePerKg = prices[manualType] || 0;
+                const newPrice = Math.round(manualWeight * pricePerKg);
+
+                setScanResult({
+                    type: manualType,
+                    weight: manualWeight,
+                    price: newPrice,
+                    confidence: 100, // Manual pasti 100% yakin
+                    isManual: true
+                });
+                setStep('result');
+                showNotif("Data sampah berhasil diperbarui!", "success");
             };
 
             const handleConfirm = () => {
-                setSaldo(prev => prev + 17500);
+                setSaldo(prev => prev + scanResult.price);
                 showNotif("Jadwal jemput dibuat! Driver OTW.", "success");
                 setActiveTab('map');
             };
@@ -437,8 +532,16 @@
             return (
                 <div className="h-full bg-black relative flex flex-col animate__animated animate__fadeIn">
                     <div className="absolute top-0 w-full z-30 pt-12 px-6 flex justify-between items-center">
-                        <button onClick={() => setActiveTab('home')} className="w-10 h-10 bg-black/40 backdrop-blur rounded-full flex items-center justify-center text-white hover:bg-black/60"><Icon name="chevronRight" size={24} className="rotate-180" /></button>
-                        <div className="bg-black/50 backdrop-blur px-4 py-1 rounded-full text-xs font-bold text-white border border-white/20">AI Mode: ON</div>
+                        <button onClick={() => step === 'manual' ? setStep('result') : setActiveTab('home')} className="w-10 h-10 bg-black/40 backdrop-blur rounded-full flex items-center justify-center text-white hover:bg-black/60">
+                            <Icon name="chevronRight" size={24} className="rotate-180" />
+                        </button>
+
+                        {step === 'manual' ? (
+                            <div className="text-white font-bold text-sm">Koreksi Manual</div>
+                        ) : (
+                            <div className="bg-black/50 backdrop-blur px-4 py-1 rounded-full text-xs font-bold text-white border border-white/20">AI Mode: ON</div>
+                        )}
+
                         <div className="w-10"></div>
                     </div>
 
@@ -463,6 +566,11 @@
                                 </div>
                             </>
                         )}
+
+                        {/* Overlay Gelap saat mode manual */}
+                        {step === 'manual' && (
+                            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-20 animate__animated animate__fadeIn"></div>
+                        )}
                     </div>
 
                     {step === 'camera' && (
@@ -479,37 +587,93 @@
 
                             <div className="flex justify-between items-start mb-6 border-b border-gray-100 pb-4">
                                 <div>
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Hasil Estimasi (AI)</p>
-                                    <h2 className="text-xl font-extrabold text-gray-800">Plastik PET & Kardus</h2>
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+                                        {scanResult.isManual ? 'Input Manual Pengguna' : 'Hasil Estimasi (AI)'}
+                                    </p>
+                                    <h2 className="text-xl font-extrabold text-gray-800">{scanResult.type}</h2>
                                     <p className="text-xs text-teal-600 font-bold mt-1 flex items-center">
-                                        <span className="w-2 h-2 bg-teal-500 rounded-full mr-2 animate-pulse"></span>
-                                        Confidence Score: 87%
+                                        <span className={`w-2 h-2 rounded-full mr-2 ${scanResult.isManual ? 'bg-blue-500' : 'bg-teal-500 animate-pulse'}`}></span>
+                                        Confidence: {scanResult.confidence}%
                                     </p>
                                 </div>
                                 <div className="bg-teal-50 text-teal-700 px-3 py-1 rounded-lg text-[10px] font-bold border border-teal-100">
-                                    High Value
+                                    {scanResult.price > 1000 ? 'High Value' : 'Standard'}
                                 </div>
                             </div>
 
                             <div className="space-y-3 mb-6">
                                 <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-200">
-                                    <div className="text-sm text-gray-600">Est. Berat</div>
-                                    <div className="font-bold text-gray-900">0.7 - 0.9 kg</div>
+                                    <div className="text-sm text-gray-600">Berat (Kg)</div>
+                                    <div className="font-bold text-gray-900">{scanResult.weight} kg</div>
                                 </div>
                                 <div className="flex justify-between items-center p-3 bg-amber-50 rounded-xl border border-amber-200">
                                     <div className="text-sm text-amber-800">Estimasi Nilai</div>
-                                    <div className="font-extrabold text-amber-600 text-lg">Rp 1.750</div>
+                                    <div className="font-extrabold text-amber-600 text-lg">Rp {scanResult.price.toLocaleString('id-ID')}</div>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
-                                <button onClick={() => setStep('camera')} className="py-3 rounded-xl font-bold text-sm text-gray-500 bg-gray-100 hover:bg-gray-200 transition">
+                                <button onClick={() => setStep('manual')} className="py-3 rounded-xl font-bold text-sm text-gray-500 bg-gray-100 hover:bg-gray-200 transition">
                                     Ralat Manual
                                 </button>
                                 <button onClick={handleConfirm} className="py-3 rounded-xl font-bold text-sm text-white bg-teal-600 shadow-lg shadow-teal-600/30 hover:bg-teal-700 transition">
                                     Konfirmasi & Jemput
                                 </button>
                             </div>
+                        </div>
+                    )}
+
+                    {/* FORM MANUAL INPUT */}
+                    {step === 'manual' && (
+                        <div className="absolute bottom-0 w-full bg-white rounded-t-[2.5rem] p-6 pb-12 animate__animated animate__slideInUp z-50 h-[70%]">
+                            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
+
+                            <h3 className="text-lg font-bold text-gray-800 mb-4">Koreksi Data Sampah</h3>
+
+                            <div className="space-y-4 mb-8">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-400 mb-2 uppercase">Jenis Sampah</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {Object.keys(prices).map((type) => (
+                                            <button
+                                                key={type}
+                                                onClick={() => setManualType(type)}
+                                                className={`py-2 px-3 rounded-lg text-xs font-bold border transition ${manualType === type
+                                                    ? 'bg-teal-600 text-white border-teal-600 shadow-md'
+                                                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                {type}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-400 mb-2 uppercase">Perkiraan Berat (Kg)</label>
+                                    <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                                        <input
+                                            type="number"
+                                            value={manualWeight}
+                                            onChange={(e) => setManualWeight(parseFloat(e.target.value))}
+                                            step="0.1"
+                                            className="bg-transparent w-full font-bold text-gray-800 focus:outline-none"
+                                        />
+                                        <span className="text-gray-400 text-sm font-bold">Kg</span>
+                                    </div>
+                                </div>
+
+                                <div className="bg-amber-50 p-3 rounded-xl border border-amber-100 flex justify-between items-center">
+                                    <span className="text-xs font-bold text-amber-700">Estimasi Baru:</span>
+                                    <span className="text-lg font-extrabold text-amber-600">
+                                        Rp {(Math.round(manualWeight * (prices[manualType] || 0))).toLocaleString('id-ID')}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <button onClick={handleSaveManual} className="w-full py-4 rounded-xl font-bold text-white bg-teal-600 shadow-lg shadow-teal-600/30 hover:bg-teal-700 transition active:scale-95">
+                                Simpan Perubahan
+                            </button>
                         </div>
                     )}
                 </div>
@@ -658,19 +822,20 @@
             </div>
         );
 
-        const ProfileScreen = ({ setScreen }) => (
+        const ProfileScreen = ({ setScreen, userName }) => (
             <div className="animate__animated animate__fadeIn pt-14 px-6 pb-24 bg-gray-50 min-h-screen">
                 {/* Header Profile */}
                 <div className="flex flex-col items-center mb-8 relative">
                     <div className="w-32 h-32 bg-gradient-to-br from-teal-400 to-teal-600 rounded-full p-1 mb-4 relative shadow-xl">
                         <div className="w-full h-full bg-white rounded-full p-1">
-                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" className="w-full h-full rounded-full bg-gray-100" alt="Profile" />
+                            {/* Avatar berubah sesuai nama userName */}
+                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userName}`} className="w-full h-full rounded-full bg-gray-100" alt="Profile" />
                         </div>
                         <div className="absolute bottom-1 right-1 bg-amber-400 p-2 rounded-full border-4 border-white text-white shadow-lg transform hover:scale-110 transition">
                             <Icon name="leaf" size={18} fill="white" />
                         </div>
                     </div>
-                    <h2 className="text-2xl font-extrabold text-gray-800 tracking-tight">Budi Santoso</h2>
+                    <h2 className="text-2xl font-extrabold text-gray-800 tracking-tight">{userName}</h2>
                     <p className="text-teal-600 text-xs font-bold uppercase tracking-widest mt-1 bg-teal-50 px-3 py-1 rounded-full border border-teal-100">Warga Peduli Lingkungan</p>
 
                     <div className="mt-4 w-64">
