@@ -158,7 +158,7 @@
             </svg>
         );
 
-        // --- ICONS (Semua sudah diperbaiki dengan <g>) ---
+        // --- ICONS ---
         const Icon = ({ name, size = 24, color = "currentColor", className = "" }) => {
             const icons = {
                 home: <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />,
@@ -188,20 +188,39 @@
         const App = () => {
             const [screen, setScreen] = useState('splash');
             const [activeTab, setActiveTab] = useState('home');
-            const [saldo, setSaldo] = useState(52500);
             const [notification, setNotification] = useState(null);
 
-            // State untuk Login Form (Ubah jadi kosong agar user mengisi sendiri)
-            const [email, setEmail] = useState('');
+            // --- DATA PERSISTENCE (LocalStorage) ---
+
+            // 1. Saldo Persistence
+            const [saldo, setSaldo] = useState(() => {
+                const saved = localStorage.getItem('resic_saldo');
+                return saved ? parseInt(saved) : 52500;
+            });
+
+            // 2. Email/Name Persistence
+            const [email, setEmail] = useState(() => {
+                return localStorage.getItem('resic_email') || '';
+            });
             const [password, setPassword] = useState('');
 
-            // LOGIKA BARU: Ambil nama dari email
-            // Contoh: susi@gmail.com -> Susi
-            // Contoh: budi.santoso@yahoo.com -> Budi Santoso
+            // 3. Transactions Persistence
+            const [transactions, setTransactions] = useState(() => {
+                const saved = localStorage.getItem('resic_transactions');
+                return saved ? JSON.parse(saved) : [
+                    { id: 2, title: 'Penarikan GoPay', date: '20 Nov • Wallet', detail: 'Biaya Admin Rp 1.000', amount: '- Rp 50.000', status: 'Cair', type: 'out' },
+                    { id: 1, title: 'Penjualan #1882', date: '18 Nov • Kardus', detail: '5.0 kg @ Rp 1.500', amount: '+ Rp 7.500', status: 'Verified', type: 'in' },
+                ];
+            });
+
+            // Save changes to LocalStorage
+            useEffect(() => { localStorage.setItem('resic_saldo', saldo); }, [saldo]);
+            useEffect(() => { localStorage.setItem('resic_email', email); }, [email]);
+            useEffect(() => { localStorage.setItem('resic_transactions', JSON.stringify(transactions)); }, [transactions]);
+
             const getUserName = () => {
                 if (!email) return "Warga Semarang";
-                const namePart = email.split('@')[0]; // Ambil teks sebelum @
-                // Hapus angka, ganti titik/underscore jadi spasi, dan kapitalisasi huruf awal
+                const namePart = email.split('@')[0];
                 return namePart
                     .replace(/[0-9]/g, '')
                     .split(/[._]/)
@@ -225,6 +244,20 @@
                 setTimeout(() => setNotification(null), 3500);
             };
 
+            // Function to add new transaction
+            const addTransaction = (type, weight, price) => {
+                const newTrx = {
+                    id: Date.now(),
+                    title: `Penjualan #${Math.floor(Math.random() * 1000) + 2000}`,
+                    date: 'Baru Saja • ' + type,
+                    detail: `${weight} kg @ Rp ${(price / weight).toFixed(0)}`,
+                    amount: `+ Rp ${price.toLocaleString('id-ID')}`,
+                    status: 'Pending',
+                    type: 'in'
+                };
+                setTransactions([newTrx, ...transactions]);
+            };
+
             // --- 1. SPLASH SCREEN ---
             if (screen === 'splash') {
                 return (
@@ -244,7 +277,6 @@
 
             // --- 2. LOGIN SCREEN ---
             if (screen === 'login') {
-                // Validasi sederhana: Cek apakah email dan password tidak kosong
                 const isFormValid = email.trim() !== '' && password.trim() !== '';
 
                 return (
@@ -262,7 +294,7 @@
 
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider">Email Terdaftar</label>
+                                <label className="block text-[11px] font-bold text-gray-400 mb-1 uppercase tracking-wider">Email Terdaftar</label>
                                 <input
                                     type="email"
                                     value={email}
@@ -272,7 +304,7 @@
                                 />
                             </div>
                             <div>
-                                <label className="block text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider">Kata Sandi</label>
+                                <label className="block text-[11px] font-bold text-gray-400 mb-1 uppercase tracking-wider">Kata Sandi</label>
                                 <input
                                     type="password"
                                     value={password}
@@ -280,6 +312,9 @@
                                     placeholder="••••••••"
                                     className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-gray-700 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition text-sm placeholder-gray-400"
                                 />
+                            </div>
+                            <div className="text-center">
+                                <p className="text-[10px] text-gray-400">Demo Mode: Tidak ada backend, data tersimpan di browser.</p>
                             </div>
                         </div>
 
@@ -319,9 +354,9 @@
 
                     <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
                         {activeTab === 'home' && <HomeScreen saldo={saldo} showNotif={showNotif} setActiveTab={setActiveTab} userName={userName} />}
-                        {activeTab === 'scan' && <ScanScreen setSaldo={setSaldo} setActiveTab={setActiveTab} showNotif={showNotif} />}
+                        {activeTab === 'scan' && <ScanScreen setSaldo={setSaldo} setActiveTab={setActiveTab} showNotif={showNotif} addTransaction={addTransaction} />}
                         {activeTab === 'map' && <MapScreen showNotif={showNotif} />}
-                        {activeTab === 'wallet' && <WalletScreen saldo={saldo} showNotif={showNotif} />}
+                        {activeTab === 'wallet' && <WalletScreen saldo={saldo} showNotif={showNotif} transactions={transactions} />}
                         {activeTab === 'profile' && <ProfileScreen setScreen={setScreen} userName={userName} />}
                     </div>
 
@@ -350,7 +385,7 @@
         const NavButton = ({ icon, label, active, onClick }) => (
             <button onClick={onClick} className={`flex flex-col items-center justify-center w-14 transition-all duration-300 ${active ? 'text-teal-600' : 'text-gray-400'}`}>
                 <Icon name={icon} size={24} strokeWidth={active ? 2.5 : 2} className={active ? "mb-1" : ""} />
-                <span className="text-[10px] font-bold mt-1 tracking-tight">{label}</span>
+                <span className="text-[11px] font-bold mt-1 tracking-tight">{label}</span>
             </button>
         );
 
@@ -376,7 +411,7 @@
                     <div className="mb-6 relative z-20">
                         <h2 className="text-teal-200 text-sm font-bold mb-1">Sugeng Rawuh,</h2>
                         <h1 className="text-white text-2xl font-extrabold tracking-tight leading-tight">Kak {userName} 👋</h1>
-                        <p className="text-teal-50 text-[10px] mt-1 opacity-90 font-medium">"Bergerak Bersama, Semarang Semakin Hebat!"</p>
+                        <p className="text-teal-50 text-[11px] mt-1 opacity-90 font-medium">"Bergerak Bersama, Semarang Semakin Hebat!"</p>
                     </div>
 
                     <div className="relative z-20 bg-teal-800/40 backdrop-blur-sm rounded-xl p-1 border border-teal-600/30 mb-6">
@@ -390,7 +425,7 @@
 
                     <div className="flex justify-between items-end relative z-10">
                         <div>
-                            <p className="text-teal-200 text-[10px] font-bold uppercase tracking-wider mb-1">Saldo RESIC Anda</p>
+                            <p className="text-teal-200 text-[11px] font-bold uppercase tracking-wider mb-1">Saldo RESIC Anda</p>
                             <div className="flex items-baseline">
                                 <span className="text-lg font-bold text-teal-300 mr-1">Rp</span>
                                 <h1 className="text-4xl font-extrabold text-white tracking-tight">{saldo.toLocaleString('id-ID')}</h1>
@@ -409,25 +444,25 @@
                             <Icon name="camera" size={20} />
                         </div>
                         <h3 className="font-bold text-gray-800 text-sm leading-tight">Mulai Jual<br />Sampah</h3>
-                        <p className="text-[10px] text-gray-500 mt-1">AI Scan & Cek Harga</p>
+                        <p className="text-[11px] text-gray-500 mt-1">AI Scan & Cek Harga</p>
                     </div>
                     <div onClick={() => setActiveTab('map')} className="flex-1 bg-white p-4 rounded-2xl shadow-xl border border-blue-50 active:scale-95 transition cursor-pointer group">
                         <div className="bg-blue-50 w-10 h-10 rounded-full flex items-center justify-center text-blue-600 mb-3 group-hover:bg-blue-600 group-hover:text-white transition">
                             <Icon name="map" size={20} />
                         </div>
                         <h3 className="font-bold text-gray-800 text-sm leading-tight">Jemput<br />Sekarang</h3>
-                        <p className="text-[10px] text-gray-500 mt-1">Area Semarang Barat</p>
+                        <p className="text-[11px] text-gray-500 mt-1">Area Semarang Barat</p>
                     </div>
                 </div>
 
                 <div className="mt-6 px-6 grid grid-cols-2 gap-3">
                     <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center">
-                        <p className="text-[9px] font-bold text-gray-400 uppercase mb-1">Reduksi Emisi CO₂</p>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Reduksi Emisi CO₂</p>
                         <h4 className="text-lg font-extrabold text-teal-600">24.5 <span className="text-xs font-normal text-gray-500">kg</span></h4>
                     </div>
                     <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center">
-                        <p className="text-[9px] font-bold text-gray-400 uppercase mb-1">Status Warga</p>
-                        <div className="bg-green-100 text-green-700 text-[9px] font-bold px-2 py-0.5 rounded-full mt-1">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Status Warga</p>
+                        <div className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full mt-1">
                             Pahlawan Daur Ulang
                         </div>
                     </div>
@@ -463,10 +498,9 @@
         );
 
         // --- SCAN SCREEN ---
-        const ScanScreen = ({ setSaldo, setActiveTab, showNotif }) => {
+        const ScanScreen = ({ setSaldo, setActiveTab, showNotif, addTransaction }) => {
             const [step, setStep] = useState('camera'); // camera, analyzing, result, manual
 
-            // State untuk data hasil scan/manual
             const [scanResult, setScanResult] = useState({
                 type: 'Plastik PET & Kardus',
                 weight: 0.8,
@@ -475,11 +509,9 @@
                 isManual: false
             });
 
-            // State untuk input form manual
             const [manualType, setManualType] = useState('Plastik PET');
             const [manualWeight, setManualWeight] = useState(0.8);
 
-            // Daftar harga sederhana untuk simulasi perhitungan
             const prices = {
                 'Plastik PET': 3500,
                 'Kardus': 2000,
@@ -491,12 +523,10 @@
 
             const handleCapture = () => {
                 setStep('analyzing');
-                // Reset form manual ke default saat scan baru
                 setManualType('Plastik PET');
                 setManualWeight(0.8);
 
                 setTimeout(() => {
-                    // Simulasi hasil AI default
                     setScanResult({
                         type: 'Plastik PET & Kardus',
                         weight: 0.8,
@@ -516,7 +546,7 @@
                     type: manualType,
                     weight: manualWeight,
                     price: newPrice,
-                    confidence: 100, // Manual pasti 100% yakin
+                    confidence: 100,
                     isManual: true
                 });
                 setStep('result');
@@ -525,6 +555,9 @@
 
             const handleConfirm = () => {
                 setSaldo(prev => prev + scanResult.price);
+                // Tambahkan transaksi real
+                addTransaction(scanResult.type, scanResult.weight, scanResult.price);
+
                 showNotif("Jadwal jemput dibuat! Driver OTW.", "success");
                 setActiveTab('map');
             };
@@ -539,7 +572,9 @@
                         {step === 'manual' ? (
                             <div className="text-white font-bold text-sm">Koreksi Manual</div>
                         ) : (
-                            <div className="bg-black/50 backdrop-blur px-4 py-1 rounded-full text-xs font-bold text-white border border-white/20">AI Mode: ON</div>
+                            <div className="bg-black/50 backdrop-blur px-4 py-1 rounded-full text-xs font-bold text-white border border-white/20">
+                                AI Demo Mode: ON
+                            </div>
                         )}
 
                         <div className="w-10"></div>
@@ -567,7 +602,6 @@
                             </>
                         )}
 
-                        {/* Overlay Gelap saat mode manual */}
                         {step === 'manual' && (
                             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-20 animate__animated animate__fadeIn"></div>
                         )}
@@ -680,7 +714,7 @@
             );
         };
 
-        // --- MAP SCREEN (DENGAN MARKER BSU) ---
+        // --- MAP SCREEN ---
         const MapScreen = ({ showNotif }) => (
             <div className="h-full bg-blue-50 relative flex flex-col animate__animated animate__fadeIn">
                 <div className="flex-1 relative overflow-hidden bg-slate-200">
@@ -713,6 +747,11 @@
                 </div>
 
                 <div className="bg-white rounded-t-[2rem] p-6 pb-28 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] relative z-20 -mt-6">
+                    <div className="flex justify-center -mt-8 mb-4">
+                        <div className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-3 py-1 rounded-full border border-yellow-200">
+                            Demo Mode: Simulasi Driver
+                        </div>
+                    </div>
                     <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-6 flex justify-between text-center">
                         <div>
                             <p className="text-[9px] text-gray-400 uppercase font-bold">Jenis</p>
@@ -759,8 +798,8 @@
             </div>
         );
 
-        // --- WALLET SCREEN ---
-        const WalletScreen = ({ saldo, showNotif }) => (
+        // --- WALLET SCREEN (Updated with Props) ---
+        const WalletScreen = ({ saldo, showNotif, transactions }) => (
             <div className="animate__animated animate__fadeIn pt-14 px-6 pb-24">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6">Dompet Saya</h2>
 
@@ -780,12 +819,8 @@
                 <div>
                     <h3 className="font-bold text-gray-800 text-sm mb-4">Riwayat Transaksi</h3>
                     <div className="space-y-3">
-                        {[
-                            { title: 'Penjualan #2039', date: '22 Nov • Plastik PET', detail: '0.8 kg @ Rp 2.500', amount: '+ Rp 2.000', status: 'Pending' },
-                            { title: 'Penarikan GoPay', date: '20 Nov • Wallet', detail: 'Biaya Admin Rp 1.000', amount: '- Rp 50.000', status: 'Cair' },
-                            { title: 'Penjualan #1882', date: '18 Nov • Kardus', detail: '5.0 kg @ Rp 1.500', amount: '+ Rp 7.500', status: 'Verified' },
-                        ].map((item, idx) => (
-                            <div key={idx} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-50 hover:border-teal-100 transition">
+                        {transactions.map((item, idx) => (
+                            <div key={item.id || idx} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-50 hover:border-teal-100 transition animate__animated animate__fadeIn">
                                 <div className="flex justify-between items-start mb-2">
                                     <div className="flex items-center space-x-3">
                                         <div className={`p-2 rounded-lg ${item.amount.includes('+') ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
@@ -801,7 +836,7 @@
                                     </div>
                                 </div>
                                 <div className="flex justify-between items-center border-t border-gray-100 pt-2 mt-1">
-                                    <p className="text-[10px] text-gray-500">{item.detail}</p>
+                                    <p className="text-[11px] text-gray-500">{item.detail}</p>
                                     <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${item.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
                                         item.status === 'Verified' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
                                         }`}>
@@ -814,7 +849,7 @@
 
                     <div className="mt-6 p-3 bg-gray-100 rounded-xl flex items-start space-x-2 opacity-70">
                         <div className="mt-0.5"><Icon name="alert" size={12} color="#6B7280" /></div>
-                        <p className="text-[9px] text-gray-500 leading-relaxed">
+                        <p className="text-[10px] text-gray-500 leading-relaxed">
                             Pembayaran diproses setelah verifikasi foto driver untuk mencegah penyalahgunaan data.
                         </p>
                     </div>
@@ -883,7 +918,7 @@
                                 </div>
                                 <div>
                                     <span className="text-sm font-bold text-gray-800 block">{item.label}</span>
-                                    <span className="text-[10px] text-gray-400 block mt-0.5 truncate w-48">{item.desc}</span>
+                                    <span className="text-[11px] text-gray-400 block mt-0.5 truncate w-48">{item.desc}</span>
                                 </div>
                             </div>
                             <div className="text-gray-300 group-hover:text-teal-600 group-hover:translate-x-1 transition"><Icon name="chevronRight" size={16} /></div>
@@ -915,7 +950,7 @@
                 </div>
 
                 <div className="text-center mb-4">
-                    <p className="text-[10px] text-gray-300 font-bold uppercase tracking-widest">RESIC App v2.5.0 (Beta)</p>
+                    <p className="text-[10px] text-gray-300 font-bold uppercase tracking-widest">RESIC App v2.6.0 (Demo Ready)</p>
                     <p className="text-[9px] text-gray-300 mt-1">Made with ❤️ for Semarang</p>
                 </div>
             </div>
